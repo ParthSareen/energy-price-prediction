@@ -6,13 +6,20 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 from sklearn.metrics import mean_squared_error, r2_score
+from datetime import timedelta
 
 # Load and preprocess data
 data = pd.read_csv('data/cleaned_data.csv')
-data.drop(columns=['to_drop', 'hour_number'], inplace=True)
+data['hour_number'] = pd.to_datetime(data['hour_number'], format='%Y%m%d-%H', errors='coerce')
+data.drop(columns=['to_drop'], inplace=True)
+
+data = data.sort_values(by='hour_number')
+data = data.set_index('hour_number')
+data['time'] = np.arange(len(data.index))
+print(data.head())
 
 # Splitting the data
-X = data[['demand', 'capacity']]
+X = data[['demand', 'capacity', 'time']]
 y = data['price']
 
 # Normalize the dataset
@@ -29,6 +36,7 @@ X_test_normalized = scaler.transform(X_test)
 
 model = LinearRegression()
 model.fit(X_train_normalized, y_train)
+print('Linear Regression Coefficients: \n', model.coef_)
 
 train_predict = model.predict(X_train_normalized)
 test_predict = model.predict(X_test_normalized)
@@ -57,3 +65,4 @@ plt.xlabel('Time')
 plt.ylabel('Price')
 plt.legend()
 plt.show()
+
