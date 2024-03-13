@@ -4,9 +4,7 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 from sklearn.metrics import mean_squared_error, r2_score
-from datetime import timedelta
 
 # Load and preprocess data
 data = pd.read_csv('data/cleaned_data.csv')
@@ -27,7 +25,11 @@ scaler = MinMaxScaler(feature_range=(0, 1))
 data_normalized = scaler.fit_transform(data)
 
 # Split into training and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+train_size = int(0.8 * len(data))
+train, test = data.iloc[:train_size], data.iloc[train_size:]
+
+X_train, y_train = train[['demand', 'capacity', 'time']], train['price']
+X_test, y_test = test[['demand', 'capacity', 'time']], test['price']
 
 # Normalize our data
 scaler = MinMaxScaler(feature_range=(0, 1))
@@ -56,13 +58,32 @@ test_r2 = r2_score(y_test, test_predict)
 print(f'Train R-Squared: {train_r2:.2f}')
 print(f'Test R-Squared: {test_r2:.2f}')
 
-# Plot baseline and predictions
-plt.figure(figsize=(10,6))
-plt.plot(y, label='Actual Price')
-plt.plot(np.concatenate((train_predict, test_predict)), label='Predicted Price')
+# Concatenate the predicted values for training and testing sets
+predicted_values = np.concatenate((train_predict, test_predict))
+
+# Create date range for the predicted values starting from the end of training data
+start_date = data.index[-len(test_predict)]
+date_range = np.arange(start_date, start_date + pd.Timedelta(hours=len(predicted_values)), dtype='datetime64[h]')
+
+# Convert y values to numpy array
+y_values = data['price'].to_numpy()
+
+# Plot the predicted and actual values against date
+plt.figure(figsize=(10, 6))
+plt.plot(date_range, predicted_values, label='Predicted Price', color='red', linestyle='--', alpha=0.6)
+plt.plot(date_range, y_values, label='Actual Price', color='blue', alpha=0.6)
 plt.title('Energy Price Prediction')
-plt.xlabel('Time')
+plt.xlabel('Date')
 plt.ylabel('Price')
 plt.legend()
 plt.show()
 
+# Plot only the test part of the predicted and actual values against date
+plt.figure(figsize=(10, 6))
+plt.plot(date_range[-len(test_predict):], test_predict, label='Predicted Price (Test)', color='red', linestyle='--', alpha=0.6)
+plt.plot(date_range[-len(test_predict):], y_values[-len(test_predict):], label='Actual Price (Test)', color='blue', alpha=0.6)
+plt.title('Energy Price Prediction (Test Data)')
+plt.xlabel('Date')
+plt.ylabel('Price')
+plt.legend()
+plt.show()
