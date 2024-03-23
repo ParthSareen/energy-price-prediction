@@ -2,14 +2,12 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 
 # Load and preprocess data
-data = pd.read_csv('data/cleaned_data.csv')
+data = pd.read_csv('data/cleaned_data_v2.csv')
 data['hour_number'] = pd.to_datetime(data['hour_number'], format='%Y%m%d-%H', errors='coerce')
-data.drop(columns=['to_drop'], inplace=True)
 
 data = data.sort_values(by='hour_number')
 data = data.set_index('hour_number')
@@ -19,10 +17,6 @@ print(data.head())
 # Splitting the data
 X = data[['demand', 'capacity', 'time']]
 y = data['price']
-
-# Normalize the dataset
-scaler = MinMaxScaler(feature_range=(0, 1))
-data_normalized = scaler.fit_transform(data)
 
 # Split into training and test sets
 train_size = int(0.8 * len(data))
@@ -43,20 +37,55 @@ print('Linear Regression Coefficients: \n', model.coef_)
 train_predict = model.predict(X_train_normalized)
 test_predict = model.predict(X_test_normalized)
 
-# Evaluate our model
-# RMSE
-train_mse = mean_squared_error(y_train, train_predict)
-test_mse = mean_squared_error(y_test, test_predict)
-train_rmse = np.sqrt(train_mse)
-test_rmse = np.sqrt(test_mse)
-print(f'Train RMSE: {train_rmse:.2f}')
-print(f'Test RMSE: {test_rmse:.2f}')
+# Evaluate our model using Cross-Validation
+from sklearn.model_selection import TimeSeriesSplit
 
-# R-Squared
-train_r2 = r2_score(y_train, train_predict)
-test_r2 = r2_score(y_test, test_predict)
-print(f'Train R-Squared: {train_r2:.2f}')
-print(f'Test R-Squared: {test_r2:.2f}')
+train_rmse_list = []
+test_rmse_list = []
+train_r2_list = []
+test_r2_list = []
+
+tscv = TimeSeriesSplit(n_splits=5)
+for train_index, test_index in tscv.split(data):
+    # Get our data splits
+    train = data.iloc[train_index]
+    test = data.iloc[test_index]
+    X_train, y_train = train[['demand', 'capacity', 'time']], train['price']
+    X_test, y_test = test[['demand', 'capacity', 'time']], test['price']
+    X_train_normalized = scaler.fit_transform(X_train)
+    X_test_normalized = scaler.transform(X_test)
+
+    # Predict model on the data splits
+    train_predict = model.predict(X_train_normalized)
+    test_predict = model.predict(X_test_normalized)
+
+    # Calculate our errors
+    # RMSE
+    train_mse = mean_squared_error(y_train, train_predict)
+    test_mse = mean_squared_error(y_test, test_predict)
+    train_rmse = np.sqrt(train_mse)
+    test_rmse = np.sqrt(test_mse)
+
+    # R-Squared
+    train_r2 = r2_score(y_train, train_predict)
+    test_r2 = r2_score(y_test, test_predict)
+
+    # Append errors to lists
+    train_rmse_list.append(train_rmse)
+    test_rmse_list.append(test_rmse)
+    train_r2_list.append(train_r2)
+    test_r2_list.append(test_r2)
+
+# Calculate the Average of our Test and Train errors
+avg_train_rmse = np.mean(train_rmse_list)
+avg_test_rmse = np.mean(test_rmse_list)
+avg_train_r2 = np.mean(train_r2_list)
+avg_test_r2 = np.mean(test_r2_list)
+
+print(f'Average Train RMSE:', avg_train_rmse)
+print(f'Average Test RMSE:', avg_test_rmse)
+print(f'Average Train R-Squared: ', avg_train_r2)
+print(f'Average Test R-Squared: ', avg_test_r2)
 
 # Concatenate the predicted values for training and testing sets
 predicted_values = np.concatenate((train_predict, test_predict))
