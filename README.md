@@ -27,8 +27,12 @@ The data was pulled from the [IESO](https://www.ieso.ca/Power-Data/Data-Director
 The project uses energy demand and capacity data, which is processed and analyzed in the `eda.ipynb` notebook. The data includes hourly energy demand, capacity, and prices, which are used to train and evaluate the forecasting models.
 
 
-
 ## Models
+
+### Time Series ARIMA Model
+
+An ARIMA (Autoregressive Integrated Moving Average) model is also explored for forecasting energy prices. This model is particularly suited for time series data that shows patterns over time, such as seasonality or trends. The ARIMA model is implemented in `arima_model.ipynb`, where it undergoes a process of identification, estimation, and diagnostic checking to ensure the best fit for the data.
+
 
 ### RNN Model
 
